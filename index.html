@@ -1,0 +1,762 @@
+<title>Apnea — Breath-Hold Trainer</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    /* light — "shoreline" */
+    --bg: #e9efec;
+    --bg2: #dfe7e3;
+    --surface: #f7faf8;
+    --surface-2: #eef3f0;
+    --ink: #10201d;
+    --muted: #5c6f6b;
+    --faint: #8397925c;
+    --line: #cbd7d2;
+    --accent: #c76f34;
+    --accent-soft: #e8a05a;
+    --cool: #2f9184;
+    --cool-soft: #63b8ab;
+    --orb-core: #e8a05a;
+    --orb-edge: #c76f34;
+    --ring-track: #cdd8d3;
+    --shadow: 0 24px 60px -30px rgba(16,32,29,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      /* dark — "deep water at dusk" */
+      --bg: #081214;
+      --bg2: #0b1a1c;
+      --surface: #10211f;
+      --surface-2: #0d1c1b;
+      --ink: #e9f1ee;
+      --muted: #8ba49f;
+      --faint: #5f817b3d;
+      --line: #1e332f;
+      --accent: #e8a05a;
+      --accent-soft: #f0b878;
+      --cool: #5fc0b0;
+      --cool-soft: #7fd0c2;
+      --orb-core: #f0b878;
+      --orb-edge: #d9803f;
+      --ring-track: #1c302c;
+      --shadow: 0 30px 80px -30px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #e9efec; --bg2: #dfe7e3; --surface: #f7faf8; --surface-2: #eef3f0;
+    --ink: #10201d; --muted: #5c6f6b; --faint: #8397925c; --line: #cbd7d2;
+    --accent: #c76f34; --accent-soft: #e8a05a; --cool: #2f9184; --cool-soft: #63b8ab;
+    --orb-core: #e8a05a; --orb-edge: #c76f34; --ring-track: #cdd8d3;
+    --shadow: 0 24px 60px -30px rgba(16,32,29,.35);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #081214; --bg2: #0b1a1c; --surface: #10211f; --surface-2: #0d1c1b;
+    --ink: #e9f1ee; --muted: #8ba49f; --faint: #5f817b3d; --line: #1e332f;
+    --accent: #e8a05a; --accent-soft: #f0b878; --cool: #5fc0b0; --cool-soft: #7fd0c2;
+    --orb-core: #f0b878; --orb-edge: #d9803f; --ring-track: #1c302c;
+    --shadow: 0 30px 80px -30px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% -10%, var(--bg2), var(--bg)) fixed;
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 28px 22px 72px; }
+
+  /* Header */
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .brand h1 {
+    font-family: ui-serif, "New York", Georgia, "Times New Roman", serif;
+    font-weight: 500; font-size: 30px; letter-spacing: .3px; margin: 0;
+    font-feature-settings: "liga" 1;
+  }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translateY(-4px); }
+  .tag { color: var(--muted); font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; }
+  .theme-btn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    width: 38px; height: 38px; border-radius: 11px; cursor: pointer; font-size: 16px;
+    display: grid; place-items: center; transition: .2s; flex: none;
+  }
+  .theme-btn:hover { color: var(--ink); border-color: var(--accent); }
+
+  /* Mode tabs */
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 26px 0 8px; }
+  .mode {
+    appearance: none; border: 1px solid var(--line); background: var(--surface);
+    color: var(--muted); border-radius: 13px; padding: 11px 6px 10px; cursor: pointer;
+    text-align: center; transition: .18s; font-family: inherit;
+  }
+  .mode .m-name { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: .01em; }
+  .mode .m-sub { display: block; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+  .mode[aria-selected="true"] { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 12%, var(--surface)); }
+  .mode[aria-selected="true"] .m-sub { color: var(--accent); }
+  .mode:hover { border-color: var(--accent); }
+  .mode:focus-visible, .mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Stage */
+  .stage {
+    margin: 22px 0 8px; padding: 30px 24px 26px; border-radius: 26px;
+    background: linear-gradient(180deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--line); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .orb-box { position: relative; width: 300px; height: 300px; display: grid; place-items: center; }
+  .ring { position: absolute; inset: 0; transform: rotate(-90deg); overflow: visible; }
+  .ring circle { fill: none; stroke-linecap: round; }
+  .ring .track { stroke: var(--ring-track); stroke-width: 4; }
+  .ring .prog { stroke: var(--accent); stroke-width: 5; transition: stroke .5s; filter: drop-shadow(0 0 6px color-mix(in oklab, var(--accent) 55%, transparent)); }
+  .orb {
+    width: 150px; height: 150px; border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, var(--orb-core), var(--orb-edge) 78%);
+    box-shadow: 0 0 60px -6px color-mix(in oklab, var(--accent) 60%, transparent),
+                inset 0 -10px 26px -8px rgba(0,0,0,.35),
+                inset 0 8px 20px -6px rgba(255,255,255,.45);
+    will-change: transform; transform: scale(.85);
+  }
+  .orb.cool { background: radial-gradient(circle at 38% 32%, var(--cool-soft), var(--cool) 80%);
+    box-shadow: 0 0 55px -8px color-mix(in oklab, var(--cool) 55%, transparent),
+                inset 0 -10px 26px -8px rgba(0,0,0,.35),
+                inset 0 8px 20px -6px rgba(255,255,255,.4); }
+
+  .readout { text-align: center; margin-top: 18px; min-height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+  .phase-label {
+    font-family: ui-serif, "New York", Georgia, serif; font-size: 22px; letter-spacing: .3px;
+    color: var(--ink); transition: color .3s;
+  }
+  .phase-hint { color: var(--muted); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; min-height: 16px; margin-top: 3px; }
+  .timer {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    font-size: 62px; font-weight: 500; letter-spacing: -.01em; line-height: 1.05;
+    font-variant-numeric: tabular-nums; margin-top: 6px; color: var(--ink);
+  }
+  .round-pill {
+    font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px; margin-top: 12px;
+    min-height: 0; opacity: 0; transition: opacity .3s;
+  }
+  .round-pill.show { opacity: 1; }
+
+  /* Controls */
+  .controls { display: flex; gap: 12px; margin-top: 20px; width: 100%; }
+  button.primary, button.ghost {
+    font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+    border-radius: 14px; padding: 15px 18px; transition: .16s; letter-spacing: .02em;
+  }
+  button.primary {
+    flex: 1; border: none; color: #fff2e4;
+    background: linear-gradient(180deg, var(--accent-soft), var(--accent));
+    box-shadow: 0 12px 26px -12px color-mix(in oklab, var(--accent) 80%, transparent);
+  }
+  button.primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+  button.primary:active { transform: translateY(0); }
+  button.primary.stopping { background: linear-gradient(180deg, #d7684f, #b64a34); box-shadow: none; }
+  button.ghost {
+    flex: none; border: 1px solid var(--line); background: transparent; color: var(--muted);
+  }
+  button.ghost:hover { color: var(--ink); border-color: var(--accent); }
+  button.ghost[hidden] { display: none; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Panels */
+  .panel {
+    margin-top: 16px; border: 1px solid var(--line); border-radius: 18px;
+    background: var(--surface); overflow: hidden;
+  }
+  .panel > summary, .panel .p-head {
+    list-style: none; cursor: pointer; padding: 15px 18px; display: flex;
+    align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .panel > summary::-webkit-details-marker { display: none; }
+  .p-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+  .p-meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chev { color: var(--muted); transition: transform .2s; font-size: 12px; }
+  details[open] .chev { transform: rotate(90deg); }
+  .p-body { padding: 4px 18px 18px; }
+
+  /* stats row */
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .stat { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px 15px; }
+  .stat .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 24px; font-variant-numeric: tabular-nums; margin-top: 4px; color: var(--ink); }
+  .stat .v.small { font-size: 15px; }
+
+  /* schedule table */
+  .sched { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .sched th, .sched td { text-align: left; padding: 7px 8px; font-size: 13px; border-bottom: 1px solid var(--line); }
+  .sched th { color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .sched td.n { color: var(--muted); }
+  .sched .hold-c { color: var(--accent); font-weight: 600; }
+  .sched .rest-c { color: var(--cool); }
+  .sched tr.active td { background: color-mix(in oklab, var(--accent) 10%, transparent); }
+
+  /* settings */
+  .field { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .field:last-child { border-bottom: none; }
+  .field label { font-size: 13.5px; }
+  .field .desc { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .time-input { display: flex; align-items: center; gap: 4px; }
+  .time-input input {
+    width: 46px; text-align: center; font-family: ui-monospace, Menlo, monospace; font-size: 15px;
+    padding: 7px 4px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .time-input span { color: var(--muted); }
+  .switch { position: relative; width: 46px; height: 27px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: .2s; cursor: pointer; }
+  .switch .track::before { content: ""; position: absolute; width: 21px; height: 21px; left: 3px; top: 3px; background: var(--surface); border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::before { transform: translateX(19px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .log-list { list-style: none; margin: 0; padding: 0; }
+  .log-list li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .log-list li:last-child { border-bottom: none; }
+  .log-list .lmode { color: var(--muted); }
+  .log-list .lval { font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .log-empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
+  .log-clear { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; font-family: inherit; }
+  .log-clear:hover { color: var(--accent); }
+
+  .safety p { font-size: 13px; color: var(--muted); margin: 8px 0; }
+  .safety strong { color: var(--ink); font-weight: 600; }
+  .safety ul { margin: 8px 0 4px; padding-left: 18px; }
+  .safety li { font-size: 13px; color: var(--muted); margin: 5px 0; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 28px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb { transition: none !important; }
+    .ring .prog { transition: none; }
+  }
+  @media (max-width: 460px) {
+    .orb-box { width: 260px; height: 260px; }
+    .timer { font-size: 52px; }
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>Apnea</h1>
+      <span class="tag">Static breath-hold</span>
+    </div>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle light and dark theme" title="Toggle theme">◐</button>
+  </header>
+
+  <nav class="modes" role="tablist" aria-label="Training mode">
+    <button class="mode" role="tab" data-mode="free" aria-selected="true">
+      <span class="m-name">Max Hold</span><span class="m-sub">Free</span>
+    </button>
+    <button class="mode" role="tab" data-mode="co2" aria-selected="false">
+      <span class="m-name">CO₂ Table</span><span class="m-sub">Tolerance</span>
+    </button>
+    <button class="mode" role="tab" data-mode="o2" aria-selected="false">
+      <span class="m-name">O₂ Table</span><span class="m-sub">Capacity</span>
+    </button>
+    <button class="mode" role="tab" data-mode="box" aria-selected="false">
+      <span class="m-name">Box</span><span class="m-sub">Calm</span>
+    </button>
+  </nav>
+
+  <section class="stage" aria-live="polite">
+    <div class="orb-box">
+      <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
+        <circle class="track" cx="150" cy="150" r="142"></circle>
+        <circle class="prog" cx="150" cy="150" r="142"></circle>
+      </svg>
+      <div class="orb" id="orb"></div>
+    </div>
+    <div class="readout">
+      <div class="phase-label" id="phaseLabel">Ready when you are</div>
+      <div class="phase-hint" id="phaseHint">Sit or lie down · relax your shoulders</div>
+      <div class="timer" id="timer">0:00</div>
+      <div class="round-pill" id="roundPill"></div>
+    </div>
+    <div class="controls">
+      <button class="primary" id="primaryBtn">Begin</button>
+      <button class="ghost" id="ghostBtn" hidden>Skip</button>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><div class="k">Personal best</div><div class="v" id="statPb">—</div></div>
+    <div class="stat"><div class="k">Last hold</div><div class="v" id="statLast">—</div></div>
+    <div class="stat"><div class="k">Sessions</div><div class="v" id="statCount">0</div></div>
+  </div>
+
+  <details class="panel" id="schedPanel" hidden>
+    <summary>
+      <span class="p-title">Session plan</span>
+      <span style="display:flex; align-items:center; gap:10px;"><span class="p-meta" id="schedMeta"></span><span class="chev">›</span></span>
+    </summary>
+    <div class="p-body">
+      <table class="sched"><thead><tr><th>Round</th><th>Recover</th><th>Hold</th></tr></thead>
+      <tbody id="schedBody"></tbody></table>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>
+      <span class="p-title">Settings</span><span class="chev">›</span>
+    </summary>
+    <div class="p-body">
+      <div class="field">
+        <div><label for="maxMin">Your max hold</label><span class="desc">Used to build the CO₂ and O₂ tables</span></div>
+        <div class="time-input">
+          <input id="maxMin" type="text" inputmode="numeric" value="1" aria-label="max hold minutes"><span>:</span>
+          <input id="maxSec" type="text" inputmode="numeric" value="30" aria-label="max hold seconds">
+        </div>
+      </div>
+      <div class="field">
+        <div><label for="breatheToggle">Guided breathe-up</label><span class="desc">40 s of paced breathing before a max hold</span></div>
+        <span class="switch"><input type="checkbox" id="breatheToggle" checked><span class="track"></span></span>
+      </div>
+      <div class="field">
+        <div><label for="soundToggle">Sound cues</label><span class="desc">Soft tones at each transition</span></div>
+        <span class="switch"><input type="checkbox" id="soundToggle" checked><span class="track"></span></span>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>
+      <span class="p-title">History</span>
+      <span style="display:flex; align-items:center; gap:10px;"><span class="p-meta" id="logMeta"></span><span class="chev">›</span></span>
+    </summary>
+    <div class="p-body">
+      <ul class="log-list" id="logList"></ul>
+      <div style="margin-top:12px; text-align:right;"><button class="log-clear" id="clearLog">Clear history</button></div>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>
+      <span class="p-title">Train safely</span><span class="chev">›</span>
+    </summary>
+    <div class="p-body safety">
+      <p><strong>Dry static only.</strong> Everything here is for breath-holds on land — sitting or lying down. Never do breath-holds in or near water without a trained buddy watching you; shallow-water blackout gives no warning and is fatal alone.</p>
+      <ul>
+        <li>Never hold your breath while standing, driving, in a bath, or in water.</li>
+        <li>Breathe up <em>calmly</em>. Don't hyperventilate hard — it hides the urge to breathe and raises blackout risk.</li>
+        <li>Contractions (the diaphragm "kicks") are normal and are your cue that the real training has begun. Dizziness, tingling lips/fingers, or tunnel vision mean <strong>stop now</strong>.</li>
+        <li>One table per day is plenty. Rest fully between sessions and never train through lightheadedness.</li>
+        <li>Skip breath-hold training if pregnant or if you have heart or lung conditions, without medical clearance.</li>
+      </ul>
+      <p>This tool is for practice and education, not medical advice.</p>
+    </div>
+  </details>
+
+  <footer>Breathe up calm · hold relaxed · recover fully</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- pure helpers (also unit-tested in Node) ----------
+  function fmt(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + String(s).padStart(2, "0");
+  }
+  function genCO2(maxSec) {
+    var rounds = 8;
+    var hold = Math.max(30, Math.round((maxSec * 0.5) / 5) * 5);
+    var rests = [];
+    for (var i = 0; i < rounds; i++) rests.push(Math.max(15, 120 - i * 15));
+    return { rounds: rounds, hold: hold, rests: rests };
+  }
+  function genO2(maxSec) {
+    var rounds = 8, rest = 120;
+    var start = Math.max(20, Math.round(maxSec * 0.4));
+    var end = Math.max(start + 20, Math.round(maxSec * 0.85));
+    var holds = [];
+    for (var i = 0; i < rounds; i++) holds.push(Math.round(start + (end - start) * i / (rounds - 1)));
+    return { rounds: rounds, rest: rest, holds: holds };
+  }
+  function buildPhases(mode, opts) {
+    var p = [], i, t;
+    if (mode === "free") {
+      if (opts.breatheUp) p.push({ kind: "breatheup", dur: 40, label: "Breathe up", early: true });
+      p.push({ kind: "ready", dur: 4, label: "Final breath" });
+      p.push({ kind: "hold", dur: null, label: "Hold", countUp: true });
+    } else if (mode === "co2") {
+      t = genCO2(opts.maxHold);
+      for (i = 0; i < t.rounds; i++) {
+        p.push({ kind: i === 0 ? "breatheup" : "rest", dur: t.rests[i], label: i === 0 ? "Breathe up" : "Recover", round: i + 1, rounds: t.rounds, early: i === 0 });
+        p.push({ kind: "hold", dur: t.hold, label: "Hold", round: i + 1, rounds: t.rounds });
+      }
+    } else if (mode === "o2") {
+      t = genO2(opts.maxHold);
+      for (i = 0; i < t.rounds; i++) {
+        p.push({ kind: i === 0 ? "breatheup" : "rest", dur: t.rest, label: i === 0 ? "Breathe up" : "Recover", round: i + 1, rounds: t.rounds, early: i === 0 });
+        p.push({ kind: "hold", dur: t.holds[i], label: "Hold", round: i + 1, rounds: t.rounds });
+      }
+    } else if (mode === "box") {
+      var cycles = 8;
+      for (i = 0; i < cycles; i++) {
+        p.push({ kind: "inhale", dur: 4, label: "Inhale", round: i + 1, rounds: cycles });
+        p.push({ kind: "holdFull", dur: 4, label: "Hold", round: i + 1, rounds: cycles });
+        p.push({ kind: "exhale", dur: 4, label: "Exhale", round: i + 1, rounds: cycles });
+        p.push({ kind: "holdEmpty", dur: 4, label: "Hold", round: i + 1, rounds: cycles });
+      }
+    }
+    return p;
+  }
+  // orb scale for a phase given seconds elapsed within it (0..1 progress for fixed phases)
+  var LO = 0.62, HI = 1.32;
+  function orbScale(kind, elapsed, dur) {
+    var prog = dur ? Math.min(1, elapsed / dur) : 0;
+    switch (kind) {
+      case "breatheup":
+      case "rest": {
+        // calm 4s-in / 4s-out cycle
+        return 0.97 - 0.35 * Math.cos((2 * Math.PI * elapsed) / 8);
+      }
+      case "ready":
+      case "inhale":
+        return LO + (HI - LO) * easeInOut(prog);
+      case "exhale":
+        return HI - (HI - LO) * easeInOut(prog);
+      case "hold":
+      case "holdFull":
+        return HI + 0.012 * Math.sin(elapsed * 2.2);
+      case "holdEmpty":
+        return LO;
+      default:
+        return 0.85;
+    }
+  }
+  function easeInOut(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+  function breathWord(kind, elapsed) {
+    if (kind === "breatheup" || kind === "rest") {
+      return ((elapsed % 8) < 4) ? "breathe in" : "breathe out";
+    }
+    return "";
+  }
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { fmt: fmt, genCO2: genCO2, genO2: genO2, buildPhases: buildPhases, orbScale: orbScale };
+    return;
+  }
+
+  // ---------- DOM ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var orb = $("orb"), ring = document.querySelector(".ring .prog");
+  var phaseLabel = $("phaseLabel"), phaseHint = $("phaseHint"), timerEl = $("timer"), roundPill = $("roundPill");
+  var primaryBtn = $("primaryBtn"), ghostBtn = $("ghostBtn");
+  var R = 142, C = 2 * Math.PI * R;
+  ring.style.strokeDasharray = C;
+  ring.style.strokeDashoffset = C;
+
+  // ---------- state ----------
+  var STORE = "apnea.v1";
+  var state = load();
+  var mode = "free";
+  var running = false, phases = [], idx = 0, phaseStart = 0, rafId = 0, endedResult = null;
+
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(STORE) || "{}");
+      return {
+        pb: s.pb || 0, last: s.last || 0, count: s.count || 0,
+        maxHold: s.maxHold || 90, breatheUp: s.breatheUp !== false, sound: s.sound !== false,
+        history: Array.isArray(s.history) ? s.history : [],
+        theme: s.theme || "auto"
+      };
+    } catch (e) {
+      return { pb: 0, last: 0, count: 0, maxHold: 90, breatheUp: true, sound: true, history: [], theme: "auto" };
+    }
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+
+  // ---------- audio ----------
+  var ac = null;
+  function beep(freq, dur, gain, type) {
+    if (!state.sound) return;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || "sine"; o.frequency.value = freq;
+      o.connect(g); g.connect(ac.destination);
+      var t = ac.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(gain || 0.15, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.2));
+      o.start(t); o.stop(t + (dur || 0.2) + 0.02);
+    } catch (e) {}
+  }
+  var cue = {
+    hold: function () { beep(196, 0.5, 0.16); },
+    rest: function () { beep(392, 0.4, 0.12); },
+    tick: function () { beep(660, 0.08, 0.08); },
+    done: function () { beep(523, 0.18, 0.14); setTimeout(function () { beep(784, 0.4, 0.14); }, 190); },
+    breath: function (inhale) { beep(inhale ? 440 : 330, 0.25, 0.09, "triangle"); }
+  };
+
+  // ---------- theme ----------
+  function applyTheme() {
+    if (state.theme === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", state.theme);
+  }
+  $("themeBtn").addEventListener("click", function () {
+    var order = { auto: "light", light: "dark", dark: "auto" };
+    state.theme = order[state.theme] || "light";
+    applyTheme(); save();
+  });
+  applyTheme();
+
+  // ---------- settings wiring ----------
+  var maxMin = $("maxMin"), maxSec = $("maxSec"), breatheToggle = $("breatheToggle"), soundToggle = $("soundToggle");
+  function syncSettingsUI() {
+    maxMin.value = Math.floor(state.maxHold / 60);
+    maxSec.value = String(state.maxHold % 60).padStart(2, "0");
+    breatheToggle.checked = state.breatheUp;
+    soundToggle.checked = state.sound;
+  }
+  function readMax() {
+    var m = parseInt(maxMin.value, 10) || 0, s = parseInt(maxSec.value, 10) || 0;
+    state.maxHold = Math.max(20, m * 60 + s);
+    save(); renderSchedule();
+  }
+  maxMin.addEventListener("change", function () { readMax(); syncSettingsUI(); });
+  maxSec.addEventListener("change", function () { readMax(); syncSettingsUI(); });
+  breatheToggle.addEventListener("change", function () { state.breatheUp = breatheToggle.checked; save(); });
+  soundToggle.addEventListener("change", function () { state.sound = soundToggle.checked; save(); if (state.sound) cue.tick(); });
+  syncSettingsUI();
+
+  // ---------- mode tabs ----------
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".mode"));
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      if (running) stopSession(false);
+      mode = tab.getAttribute("data-mode");
+      tabs.forEach(function (t) { t.setAttribute("aria-selected", t === tab ? "true" : "false"); });
+      resetStage();
+      renderSchedule();
+    });
+  });
+
+  // ---------- schedule preview ----------
+  function renderSchedule() {
+    var panel = $("schedPanel");
+    if (mode !== "co2" && mode !== "o2") { panel.hidden = true; return; }
+    panel.hidden = false;
+    var t = mode === "co2" ? genCO2(state.maxHold) : genO2(state.maxHold);
+    var body = $("schedBody"), rows = "";
+    for (var i = 0; i < t.rounds; i++) {
+      var rest = mode === "co2" ? t.rests[i] : t.rest;
+      var hold = mode === "co2" ? t.hold : t.holds[i];
+      rows += '<tr data-r="' + i + '"><td class="n">' + (i + 1) + '</td><td class="rest-c">' + fmt(rest) + '</td><td class="hold-c">' + fmt(hold) + "</td></tr>";
+    }
+    body.innerHTML = rows;
+    var total = 0;
+    for (var j = 0; j < t.rounds; j++) total += (mode === "co2" ? t.rests[j] + t.hold : t.rest + t.holds[j]);
+    $("schedMeta").textContent = "8 rounds · ~" + Math.round(total / 60) + " min";
+  }
+
+  // ---------- stats + history ----------
+  function renderStats() {
+    $("statPb").textContent = state.pb ? fmt(state.pb) : "—";
+    $("statLast").textContent = state.last ? fmt(state.last) : "—";
+    $("statCount").textContent = state.count;
+    var list = $("logList"), h = state.history.slice(0, 12);
+    if (!h.length) { list.innerHTML = '<div class="log-empty">No sessions yet. Your holds and completed tables will appear here.</div>'; }
+    else {
+      list.innerHTML = h.map(function (e) {
+        return '<li><span class="lmode">' + e.label + "</span><span class=\"lval\">" + e.value + "</span></li>";
+      }).join("");
+    }
+    $("logMeta").textContent = state.history.length ? state.history.length + " logged" : "";
+  }
+  function logSession(label, value) {
+    state.count += 1;
+    state.history.unshift({ label: label, value: value });
+    state.history = state.history.slice(0, 40);
+    save(); renderStats();
+  }
+  $("clearLog").addEventListener("click", function () {
+    state.history = []; save(); renderStats();
+  });
+
+  // ---------- session engine ----------
+  function resetStage() {
+    cancelAnimationFrame(rafId);
+    running = false; endedResult = null;
+    orb.style.transform = "scale(.85)"; orb.classList.remove("cool");
+    ring.style.strokeDashoffset = C; ring.style.stroke = "var(--accent)";
+    roundPill.classList.remove("show"); roundPill.textContent = "";
+    primaryBtn.textContent = "Begin"; primaryBtn.classList.remove("stopping");
+    ghostBtn.hidden = true;
+    phaseLabel.textContent = "Ready when you are";
+    phaseHint.textContent = modeHint();
+    timerEl.textContent = "0:00";
+  }
+  function modeHint() {
+    return { free: "Sit or lie down · relax your shoulders", co2: "Builds tolerance to the urge to breathe",
+      o2: "Builds your max breath-hold capacity", box: "4-4-4-4 · calm your nervous system" }[mode];
+  }
+
+  function startSession() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    phases = buildPhases(mode, { breatheUp: state.breatheUp, maxHold: state.maxHold });
+    if (!phases.length) return;
+    running = true; idx = 0; endedResult = null;
+    primaryBtn.textContent = mode === "free" ? "Stop hold" : "End session";
+    primaryBtn.classList.add("stopping");
+    enterPhase(0);
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function enterPhase(n) {
+    idx = n;
+    var ph = phases[n];
+    phaseStart = performance.now();
+    ph._tick = -1;
+    // visuals
+    var cool = (ph.kind === "rest" || ph.kind === "breatheup" || ph.kind === "exhale" || ph.kind === "holdEmpty");
+    orb.classList.toggle("cool", cool);
+    ring.style.stroke = cool ? "var(--cool)" : "var(--accent)";
+    phaseLabel.textContent = ph.label;
+    if (ph.rounds) { roundPill.classList.add("show"); roundPill.textContent = (mode === "box" ? "Cycle " : "Round ") + ph.round + " / " + ph.rounds; }
+    else { roundPill.classList.remove("show"); }
+    // ghost (skip) button
+    if (ph.early) { ghostBtn.hidden = false; ghostBtn.textContent = ph.kind === "breatheup" ? "Hold now →" : "Skip →"; }
+    else if (ph.kind === "rest") { ghostBtn.hidden = false; ghostBtn.textContent = "Skip →"; }
+    else if (ph.kind === "hold" && ph.dur) { ghostBtn.hidden = false; ghostBtn.textContent = "Next →"; }
+    else { ghostBtn.hidden = true; }
+    // cues
+    if (ph.kind === "hold" || ph.kind === "holdFull") cue.hold();
+    else if (ph.kind === "rest" || ph.kind === "breatheup" || ph.kind === "exhale" || ph.kind === "holdEmpty") cue.rest();
+    else if (ph.kind === "inhale" || ph.kind === "ready") cue.breath(true);
+  }
+
+  function loop(now) {
+    if (!running) return;
+    var ph = phases[idx];
+    var elapsed = (now - phaseStart) / 1000;
+
+    // orb + ring + timer
+    orb.style.transform = "scale(" + orbScale(ph.kind, elapsed, ph.dur).toFixed(4) + ")";
+    if (ph.dur) {
+      var prog = Math.min(1, elapsed / ph.dur);
+      ring.style.strokeDashoffset = C * (1 - prog);
+      var remain = Math.max(0, ph.dur - elapsed);
+      timerEl.textContent = fmt(Math.ceil(remain));
+      // tick on last 3 seconds
+      var whole = Math.ceil(remain);
+      if (whole <= 3 && whole >= 1 && whole !== ph._tick) { ph._tick = whole; cue.tick(); }
+    } else {
+      // open-ended hold: count up, gentle breathing ring
+      timerEl.textContent = fmt(elapsed);
+      var pulse = 0.5 + 0.5 * Math.sin(elapsed * 1.4);
+      ring.style.strokeDashoffset = C * (0.12 + 0.02 * pulse);
+      var mark = Math.floor(elapsed);
+      if (mark > 0 && mark % 30 === 0 && mark !== ph._tick) { ph._tick = mark; cue.tick(); }
+    }
+
+    // breathing hint
+    var w = breathWord(ph.kind, elapsed);
+    phaseHint.textContent = w || (ph.kind === "hold" ? "let contractions come" : ph.kind === "ready" ? "big, calm inhale" : "");
+
+    // phase completion
+    if (ph.dur && elapsed >= ph.dur) {
+      advance();
+      if (!running) return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function advance() {
+    var ph = phases[idx];
+    // record a completed max hold as we leave it
+    if (mode === "free" && ph.kind === "hold") {
+      finishFreeHold((performance.now() - phaseStart) / 1000);
+      return;
+    }
+    if (idx + 1 >= phases.length) { completeSession(); return; }
+    enterPhase(idx + 1);
+  }
+
+  function finishFreeHold(sec) {
+    var val = Math.round(sec);
+    state.last = val;
+    var isPb = val > state.pb;
+    if (isPb) { state.pb = val; if (val > state.maxHold) { state.maxHold = val; syncSettingsUI(); renderSchedule(); } }
+    save();
+    logSession(isPb ? "Max hold · new best" : "Max hold", fmt(val));
+    stopSession(true);
+    phaseLabel.textContent = isPb ? "New personal best" : "Hold complete";
+    phaseHint.textContent = isPb ? "recover with slow, easy breaths" : "recover with slow, easy breaths";
+    timerEl.textContent = fmt(val);
+    cue.done();
+  }
+
+  function completeSession() {
+    var label = { co2: "CO₂ table", o2: "O₂ table", box: "Box breathing" }[mode] || "Session";
+    logSession(label + " · complete", "done");
+    stopSession(true);
+    phaseLabel.textContent = "Session complete";
+    phaseHint.textContent = "well held — recover fully";
+    timerEl.textContent = "✓";
+    cue.done();
+  }
+
+  function stopSession(completed) {
+    running = false;
+    cancelAnimationFrame(rafId);
+    primaryBtn.textContent = "Begin";
+    primaryBtn.classList.remove("stopping");
+    ghostBtn.hidden = true;
+    roundPill.classList.remove("show");
+    orb.style.transform = "scale(.85)";
+    ring.style.strokeDashoffset = C;
+    if (!completed) {
+      orb.classList.remove("cool");
+      ring.style.stroke = "var(--accent)";
+      phaseLabel.textContent = "Ready when you are";
+      phaseHint.textContent = modeHint();
+      timerEl.textContent = "0:00";
+    }
+  }
+
+  // ---------- controls ----------
+  primaryBtn.addEventListener("click", function () {
+    if (running) {
+      var ph = phases[idx];
+      if (mode === "free" && ph.kind === "hold") { finishFreeHold((performance.now() - phaseStart) / 1000); }
+      else { stopSession(false); }
+    } else {
+      startSession();
+    }
+  });
+  ghostBtn.addEventListener("click", function () {
+    if (!running) return;
+    advance();
+    if (running) rafId = requestAnimationFrame(loop);
+  });
+
+  // keyboard: space toggles / advances
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); primaryBtn.click(); }
+  });
+
+  // ---------- init ----------
+  renderStats();
+  renderSchedule();
+  resetStage();
+})();
+</script>
