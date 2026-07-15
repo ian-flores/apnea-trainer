@@ -6,6 +6,10 @@ breathing orb that paces you so you can train with your eyes half-closed.
 
 No build step, no dependencies, no server. Open `index.html` and go.
 
+**Live:** https://ian-flores.github.io/apnea-trainer/
+
+![The Apnea trainer in dark mode: a glowing breath orb, mode tabs, timer, and stats](docs/screenshot.png)
+
 > ⚠️ **Dry static only.** Everything here is for breath-holds on land, sitting or
 > lying down. **Never** hold your breath in or near water without a trained buddy
 > watching — shallow-water blackout gives no warning and is fatal alone. See
@@ -44,10 +48,15 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 
 ### How the tables are generated
 
+Both tables are sized from a single number — **your best hold** — so they always
+reflect your current ability. That number auto-updates every time you finish a Max
+Hold that beats your record, and you can also set it directly in Settings. There's no
+separate figure to keep in sync.
+
 | Table | Recovery | Hold | Purpose |
 |-------|----------|------|---------|
-| **CO₂** | starts 2:00, drops 15 s each round (min 0:15) | fixed at ~50 % of your max | tolerate rising CO₂ / the urge to breathe |
-| **O₂**  | fixed 2:00 | rises from ~40 % to ~85 % of your max over 8 rounds | extend maximum hold time |
+| **CO₂** | starts 2:00, drops 15 s each round (min 0:15) | fixed at ~50 % of your best | tolerate rising CO₂ / the urge to breathe |
+| **O₂**  | fixed 2:00 | rises from ~40 % to ~85 % of your best over 8 rounds | extend maximum hold time |
 
 Both are 8 rounds. Preview the exact schedule in the **Session plan** panel before you start.
 

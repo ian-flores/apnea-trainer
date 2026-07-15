@@ -313,7 +313,7 @@
     </summary>
     <div class="p-body">
       <div class="field">
-        <div><label for="maxMin">Your max hold</label><span class="desc">Used to build the CO₂ and O₂ tables</span></div>
+        <div><label for="maxMin">Your best hold</label><span class="desc">Drives the CO₂ / O₂ tables · updates after each Max Hold</span></div>
         <div class="time-input">
           <input id="maxMin" type="text" inputmode="numeric" value="1" aria-label="max hold minutes"><span>:</span>
           <input id="maxSec" type="text" inputmode="numeric" value="30" aria-label="max hold seconds">
@@ -465,6 +465,9 @@
   var STORE = "apnea.v1";
   var state = load();
   var mode = "free";
+  // Single source of truth for table sizing: your personal best (falls back to
+  // the starting estimate until you've logged a hold).
+  function tableBasis() { return state.pb > 0 ? state.pb : (state.maxHold || 90); }
   var running = false, phases = [], idx = 0, phaseStart = 0, rafId = 0, endedResult = null;
 
   function load() {
@@ -522,15 +525,17 @@
   // ---------- settings wiring ----------
   var maxMin = $("maxMin"), maxSec = $("maxSec"), breatheToggle = $("breatheToggle"), soundToggle = $("soundToggle");
   function syncSettingsUI() {
-    maxMin.value = Math.floor(state.maxHold / 60);
-    maxSec.value = String(state.maxHold % 60).padStart(2, "0");
+    var basis = tableBasis();
+    maxMin.value = Math.floor(basis / 60);
+    maxSec.value = String(basis % 60).padStart(2, "0");
     breatheToggle.checked = state.breatheUp;
     soundToggle.checked = state.sound;
   }
   function readMax() {
     var m = parseInt(maxMin.value, 10) || 0, s = parseInt(maxSec.value, 10) || 0;
-    state.maxHold = Math.max(20, m * 60 + s);
-    save(); renderSchedule();
+    state.pb = Math.max(20, m * 60 + s);
+    state.maxHold = state.pb;
+    save(); renderStats(); renderSchedule();
   }
   maxMin.addEventListener("change", function () { readMax(); syncSettingsUI(); });
   maxSec.addEventListener("change", function () { readMax(); syncSettingsUI(); });
@@ -555,7 +560,8 @@
     var panel = $("schedPanel");
     if (mode !== "co2" && mode !== "o2") { panel.hidden = true; return; }
     panel.hidden = false;
-    var t = mode === "co2" ? genCO2(state.maxHold) : genO2(state.maxHold);
+    var basis = tableBasis();
+    var t = mode === "co2" ? genCO2(basis) : genO2(basis);
     var body = $("schedBody"), rows = "";
     for (var i = 0; i < t.rounds; i++) {
       var rest = mode === "co2" ? t.rests[i] : t.rest;
@@ -612,7 +618,7 @@
 
   function startSession() {
     if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-    phases = buildPhases(mode, { breatheUp: state.breatheUp, maxHold: state.maxHold });
+    phases = buildPhases(mode, { breatheUp: state.breatheUp, maxHold: tableBasis() });
     if (!phases.length) return;
     running = true; idx = 0; endedResult = null;
     primaryBtn.textContent = mode === "free" ? "Stop hold" : "End session";
@@ -695,7 +701,7 @@
     var val = Math.round(sec);
     state.last = val;
     var isPb = val > state.pb;
-    if (isPb) { state.pb = val; if (val > state.maxHold) { state.maxHold = val; syncSettingsUI(); renderSchedule(); } }
+    if (isPb) { state.pb = val; state.maxHold = val; syncSettingsUI(); renderSchedule(); }
     save();
     logSession(isPb ? "Max hold · new best" : "Max hold", fmt(val));
     stopSession(true);
