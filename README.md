@@ -28,6 +28,8 @@ No build step, no dependencies, no server. Open `index.html` and go.
   hold, turns seafoam and shrinks during recovery. Soft tones mark transitions and
   tick the last 3 seconds.
 - **Personal best, last hold, session history** — all saved locally in your browser.
+- **Keeps the screen awake** during a session (where the browser supports the Screen
+  Wake Lock API), and keeps phases and cues advancing if you switch tabs.
 - **Light / dark themes** — auto-follows your OS, or tap the ◐ button to cycle
   auto → light → dark.
 
@@ -42,16 +44,16 @@ open index.html
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
-- Set **Your max hold** in Settings — the CO₂ and O₂ tables are generated from it.
+- Set **Table basis** in Settings — the CO₂ and O₂ tables are generated from it.
 - Press **Begin** (or `Space`) to start; `Space` again stops / advances.
 - The **Skip →** / **Hold now →** button advances the current phase early.
 
 ### How the tables are generated
 
-Both tables are sized from a single number — **your best hold** — so they always
-reflect your current ability. That number auto-updates every time you finish a Max
-Hold that beats your record, and you can also set it directly in Settings. There's no
-separate figure to keep in sync.
+Both tables are sized from a single number — the **table basis** — which starts at
+1:30 and jumps to your new record every time you finish a Max Hold that beats it. You
+can also set it directly in Settings (e.g. lower it on an off day); doing so never
+changes your recorded personal best.
 
 | Table | Recovery | Hold | Purpose |
 |-------|----------|------|---------|

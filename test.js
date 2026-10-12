@@ -77,5 +77,20 @@ for (let e = 0; e <= 16; e += 0.25) { const s = L.orbScale("breatheup", e, null)
 ok("breatheup within bounds", inb);
 ok("ready expands", L.orbScale("ready", 0, 4) < L.orbScale("ready", 4, 4));
 
+// catchUp: advances past elapsed phases without drift
+const cp = L.buildPhases("co2", { maxHold: 180 }); // rests 120,105,... hold 90
+let r = L.catchUp(cp, 0, 0, 119000);
+ok("catchUp mid-phase stays", r.idx === 0 && r.phaseStart === 0 && !r.done);
+r = L.catchUp(cp, 0, 0, 120000);
+ok("catchUp boundary advances", r.idx === 1 && r.phaseStart === 120000);
+r = L.catchUp(cp, 0, 0, 120000 + 90000 + 105000 + 1000); // rest, hold, rest elapsed
+ok("catchUp skips several phases", r.idx === 3 && r.phaseStart === 315000 && !r.done);
+const total = cp.reduce((a, p) => a + p.dur, 0) * 1000;
+r = L.catchUp(cp, 0, 0, total + 5000);
+ok("catchUp past end is done", r.done === true);
+const fp = L.buildPhases("free", { breatheUp: true, maxHold: 90 });
+r = L.catchUp(fp, 0, 0, 10 * 60 * 1000);
+ok("catchUp stops at open-ended hold", r.idx === 2 && r.phaseStart === 44000 && !r.done);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

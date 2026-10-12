@@ -1,3 +1,11 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A calm, single-file web app for dry static apnea (breath-hold) training.">
+<meta name="theme-color" content="#e9efec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#081214" media="(prefers-color-scheme: dark)">
 <title>Apnea — Breath-Hold Trainer</title>
 <style>
   :root {
@@ -244,6 +252,8 @@
     .stats { grid-template-columns: 1fr; }
   }
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header>
@@ -313,7 +323,7 @@
     </summary>
     <div class="p-body">
       <div class="field">
-        <div><label for="maxMin">Your best hold</label><span class="desc">Drives the CO₂ / O₂ tables · updates after each Max Hold</span></div>
+        <div><label for="maxMin">Table basis</label><span class="desc">Drives the CO₂ / O₂ tables · rises with each new best Max Hold</span></div>
         <div class="time-input">
           <input id="maxMin" type="text" inputmode="numeric" value="1" aria-label="max hold minutes"><span>:</span>
           <input id="maxSec" type="text" inputmode="numeric" value="30" aria-label="max hold seconds">
@@ -447,8 +457,19 @@
     return "";
   }
 
+  // Advance past every timed phase that has fully elapsed by `now` (ms). Each
+  // phase starts exactly when the previous one ended, so a throttled or
+  // backgrounded page catches up without drift. done = ran past the last phase.
+  function catchUp(phases, idx, phaseStart, now) {
+    while (idx < phases.length && phases[idx].dur && now - phaseStart >= phases[idx].dur * 1000) {
+      phaseStart += phases[idx].dur * 1000;
+      idx++;
+    }
+    return { idx: idx, phaseStart: phaseStart, done: idx >= phases.length };
+  }
+
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { fmt: fmt, genCO2: genCO2, genO2: genO2, buildPhases: buildPhases, orbScale: orbScale };
+    module.exports = { fmt: fmt, genCO2: genCO2, genO2: genO2, buildPhases: buildPhases, orbScale: orbScale, catchUp: catchUp };
     return;
   }
 
@@ -465,10 +486,10 @@
   var STORE = "apnea.v1";
   var state = load();
   var mode = "free";
-  // Single source of truth for table sizing: your personal best (falls back to
-  // the starting estimate until you've logged a hold).
-  function tableBasis() { return state.pb > 0 ? state.pb : (state.maxHold || 90); }
-  var running = false, phases = [], idx = 0, phaseStart = 0, rafId = 0, endedResult = null;
+  // Table sizing uses its own setting so editing it never rewrites your
+  // personal best; a new best Max Hold raises it automatically.
+  function tableBasis() { return state.maxHold || 90; }
+  var running = false, phases = [], idx = 0, phaseStart = 0, rafId = 0, timerId = 0, endedResult = null;
 
   function load() {
     try {
@@ -533,9 +554,8 @@
   }
   function readMax() {
     var m = parseInt(maxMin.value, 10) || 0, s = parseInt(maxSec.value, 10) || 0;
-    state.pb = Math.max(20, m * 60 + s);
-    state.maxHold = state.pb;
-    save(); renderStats(); renderSchedule();
+    state.maxHold = Math.max(20, m * 60 + s);
+    save(); renderSchedule();
   }
   maxMin.addEventListener("change", function () { readMax(); syncSettingsUI(); });
   maxSec.addEventListener("change", function () { readMax(); syncSettingsUI(); });
@@ -601,6 +621,8 @@
   // ---------- session engine ----------
   function resetStage() {
     cancelAnimationFrame(rafId);
+    clearInterval(timerId);
+    unlockScreen();
     running = false; endedResult = null;
     orb.style.transform = "scale(.85)"; orb.classList.remove("cool");
     ring.style.strokeDashoffset = C; ring.style.stroke = "var(--accent)";
@@ -616,6 +638,20 @@
       o2: "Builds your max breath-hold capacity", box: "4-4-4-4 · calm your nervous system" }[mode];
   }
 
+  // ---------- screen wake lock ----------
+  var wakeLock = null;
+  function lockScreen() {
+    if (!navigator.wakeLock || wakeLock) return;
+    navigator.wakeLock.request("screen").then(function (l) {
+      if (!running) { l.release(); return; }
+      wakeLock = l;
+      l.addEventListener("release", function () { if (wakeLock === l) wakeLock = null; });
+    }).catch(function () {});
+  }
+  function unlockScreen() {
+    if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
+  }
+
   function startSession() {
     if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
     phases = buildPhases(mode, { breatheUp: state.breatheUp, maxHold: tableBasis() });
@@ -624,13 +660,16 @@
     primaryBtn.textContent = mode === "free" ? "Stop hold" : "End session";
     primaryBtn.classList.add("stopping");
     enterPhase(0);
+    lockScreen();
     rafId = requestAnimationFrame(loop);
+    // rAF pauses in background tabs; this keeps phases and cues advancing there
+    timerId = setInterval(function () { if (document.hidden) step(performance.now()); }, 250);
   }
 
-  function enterPhase(n) {
+  function enterPhase(n, start) {
     idx = n;
     var ph = phases[n];
-    phaseStart = performance.now();
+    phaseStart = start === undefined ? performance.now() : start;
     ph._tick = -1;
     // visuals
     var cool = (ph.kind === "rest" || ph.kind === "breatheup" || ph.kind === "exhale" || ph.kind === "holdEmpty");
@@ -651,8 +690,19 @@
   }
 
   function loop(now) {
+    step(now);
+    if (running) rafId = requestAnimationFrame(loop);
+  }
+
+  function step(now) {
     if (!running) return;
     var ph = phases[idx];
+    if (ph.dur && now - phaseStart >= ph.dur * 1000) {
+      var r = catchUp(phases, idx, phaseStart, now);
+      if (r.done) { completeSession(); return; }
+      enterPhase(r.idx, r.phaseStart);
+      ph = phases[idx];
+    }
     var elapsed = (now - phaseStart) / 1000;
 
     // orb + ring + timer
@@ -677,13 +727,6 @@
     // breathing hint
     var w = breathWord(ph.kind, elapsed);
     phaseHint.textContent = w || (ph.kind === "hold" ? "let contractions come" : ph.kind === "ready" ? "big, calm inhale" : "");
-
-    // phase completion
-    if (ph.dur && elapsed >= ph.dur) {
-      advance();
-      if (!running) return;
-    }
-    rafId = requestAnimationFrame(loop);
   }
 
   function advance() {
@@ -724,6 +767,8 @@
   function stopSession(completed) {
     running = false;
     cancelAnimationFrame(rafId);
+    clearInterval(timerId);
+    unlockScreen();
     primaryBtn.textContent = "Begin";
     primaryBtn.classList.remove("stopping");
     ghostBtn.hidden = true;
@@ -752,7 +797,14 @@
   ghostBtn.addEventListener("click", function () {
     if (!running) return;
     advance();
-    if (running) rafId = requestAnimationFrame(loop);
+  });
+
+  // wake locks drop when the page is hidden: re-acquire and catch up on return
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden || !running) return;
+    lockScreen();
+    if (ac && ac.state === "suspended") ac.resume();
+    step(performance.now());
   });
 
   // keyboard: space toggles / advances
@@ -766,3 +818,5 @@
   resetStage();
 })();
 </script>
+</body>
+</html>
