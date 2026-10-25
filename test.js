@@ -92,5 +92,28 @@ const fp = L.buildPhases("free", { breatheUp: true, maxHold: 90 });
 r = L.catchUp(fp, 0, 0, 10 * 60 * 1000);
 ok("catchUp stops at open-ended hold", r.idx === 2 && r.phaseStart === 44000 && !r.done);
 
+// holdSeries: dated max holds only, oldest first
+const hist = [
+  { label: "Max hold", value: "1:40", t: 3000, sec: 100 },
+  { label: "CO2 table · complete", value: "done", t: 2500 },
+  { label: "Max hold", value: "1:30" },                       // legacy, undated
+  { label: "Max hold · new best", value: "1:50", t: 1000, sec: 110 },
+];
+const ser = L.holdSeries(hist);
+ok("holdSeries filters", ser.length === 2);
+ok("holdSeries ascending", ser[0].t === 1000 && ser[1].sec === 100);
+
+// chartGeom
+const pad = { l: 30, r: 10, t: 10, b: 20 };
+const g = L.chartGeom([{ t: 0, sec: 60 }, { t: 100, sec: 120 }], 340, 130, pad);
+ok("geom yMax above best", g.yMax >= 120 * 1.12 && g.yMax % 30 === 0);
+ok("geom x spans plot", g.pts[0].x === 30 && g.pts[1].x === 330);
+ok("geom higher hold plots higher", g.pts[1].y < g.pts[0].y);
+ok("geom ticks start at 0 on baseline", g.ticks[0].sec === 0 && g.ticks[0].y === 110);
+ok("geom top tick at plot top", g.ticks[g.ticks.length - 1].y === 10);
+const g1 = L.chartGeom([{ t: 5, sec: 300 }, { t: 5, sec: 310 }], 340, 130, pad);
+ok("geom same-time points centered, no NaN", g1.pts.every(p => p.x === 180 && !isNaN(p.y)));
+ok("geom long holds use 60s steps", g1.ticks[1].sec === 60);
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

@@ -18,7 +18,8 @@ No build step, no dependencies, no server. Open `index.html` and go.
 ## Features
 
 - **Max Hold** — a guided 40 s breathe-up, a final-breath cue, then an open-ended
-  count-up hold. Tap **Stop hold** to bank the time. Tracks your personal best.
+  count-up hold. Tap **Stop hold** to bank the time (holds under 10 s are treated as an
+  accidental tap and not logged). Tracks your personal best.
 - **CO₂ Table** — 8 rounds, fixed hold with shrinking recovery periods. Builds
   tolerance to the urge to breathe.
 - **O₂ Table** — 8 rounds, fixed 2:00 recovery with lengthening holds. Builds
@@ -27,7 +28,9 @@ No build step, no dependencies, no server. Open `index.html` and go.
 - **Breathing orb + progress ring** — expands on the inhale, holds full during a
   hold, turns seafoam and shrinks during recovery. Soft tones mark transitions and
   tick the last 3 seconds.
-- **Personal best, last hold, session history** — all saved locally in your browser.
+- **Personal best, last hold, dated session history** — all saved locally in your browser.
+- **Progress chart** — your Max Hold times plotted over time, with your best labelled.
+  Hover or tap a point for its exact time and date.
 - **Keeps the screen awake** during a session (where the browser supports the Screen
   Wake Lock API), and keeps phases and cues advancing if you switch tabs.
 - **Light / dark themes** — auto-follows your OS, or tap the ◐ button to cycle
